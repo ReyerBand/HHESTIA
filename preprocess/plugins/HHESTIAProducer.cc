@@ -394,7 +394,7 @@ HHESTIAProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
                // Secondary Vertex Variables
                //const reco::SecondaryVertexTagInfo &svTagInfo = *ijet->tagInfoSecondaryVertex("secondaryVertex");
                //cout << "Number of Secondary Vertices: " << ijet->tagInfoSecondaryVertex()->nVertices();
-               cout << "Has Secondary Vertex tag info: " << ijet->hasTagInfo("pfInclusiveSecondaryVertexFinderTagInfos");
+	       //               cout << "Has Secondary Vertex tag info: " << ijet->hasTagInfo("pfInclusiveSecondaryVertexFinderTagInfos");
                //cout << "Number of Secondary Vertices: " << svTagInfo.nVertices();
                //treeVars["nSecondaryVertices"] = svTagInfo.nVertices();
 
