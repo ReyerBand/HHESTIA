@@ -8,6 +8,8 @@
 import ROOT as root
 import numpy
 import h5py
+import matplotlib
+matplotlib.use('Agg') #prevents opening displays, must use before pyplot
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import pickle
@@ -22,7 +24,7 @@ from sklearn.externals import joblib
 
 # set up keras
 from os import environ
-environ["KERAS_BACKEND"] = "tensorflow"
+environ["KERAS_BACKEND"] = "tensorflow" #must set backend before importing keras
 from keras.models import Sequential, Model
 from keras.optimizers import SGD
 from keras.layers import Input, Activation, Dense, Convolution2D, MaxPooling2D, Dropout, Flatten
@@ -148,10 +150,10 @@ model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu
 model_BESTNN.add( Dropout(0.20) )
 model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu"))
 model_BESTNN.add( Dropout(0.20) )
-model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu"))
-model_BESTNN.add( Dropout(0.20) )
-model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu"))
-model_BESTNN.add( Dropout(0.20) )
+#model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu"))
+#model_BESTNN.add( Dropout(0.20) )
+#model_BESTNN.add( Dense(40, kernel_initializer="glorot_normal", activation="relu"))
+#model_BESTNN.add( Dropout(0.20) )
 model_BESTNN.add( Dense(3, kernel_initializer="glorot_normal", activation="softmax"))
 
 # compile the model
@@ -217,7 +219,7 @@ if plotProbs == False:
    print "HHESTIA probabilities will not be plotted. This can be changed at the beginning of the program."
 
 # make file with probability results
-joblib.dump(model_BESTNN, "HHESTIA_mlp.pkl")
+joblib.dump(model_BESTNN, "HHESTIA_keras.pkl")
 joblib.dump(scaler, "HHESTIA_scaler.pkl")
 
 print "Made weights based on probability results"

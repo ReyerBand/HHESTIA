@@ -87,138 +87,157 @@ int FWMoments(std::vector<TLorentzVector> particles, double (&outputs)[5] ){
 }
 
 //=================================================================================
-// Sort Jets ----------------------------------------------------------------------
+// Get All Jet Constituents -------------------------------------------------------
 //---------------------------------------------------------------------------------
-// This function takes in a Jet handle and returns a handle with the top four   ---
-// jets sorted by pT                                                            ---
+// This gets all the jet constituents (daughters) and stores them as a standard ---
+// vector -------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
- 
-std::vector<pat::Jet> * sortJets(std::vector<pat::Jet> *jets)
-{
-   std::vector<pat::Jet> *sortedJets = new std::vector<pat::Jet>;
-   pat::Jet *jet1 = new pat::Jet;
-   pat::Jet *jet2 = new pat::Jet;
-   pat::Jet *jet3 = new pat::Jet;
-   pat::Jet *jet4 = new pat::Jet;
-   
-   // Get leading jet
-   if(jets->size() > 0){
-      for (std::vector<pat::Jet>::const_iterator jetBegin = jets->begin(), jetEnd = jets->end(), ijet = jetBegin; ijet != jetEnd; ++ijet){
-          if(!jet1){
-             *jet1 = *ijet;
-          }
-          if(jet1 && ijet->pt() > jet1->pt() ){
-             *jet1 = *ijet;
-          }
-       }
-       sortedJets->push_back(*jet1);
-       //std::cout << "Jet 1 pT: " << jet1->pt() << std::endl;
+
+void getJetDaughters(std::vector<reco::Candidate * > &daughtersOfJet, std::vector<pat::Jet>::const_iterator jet,
+                     std::map<std::string, std::vector<float> > &jetPFcand ){ 
+   // First get all daughters for the first Soft Drop Subjet
+   for (unsigned int i = 0; i < jet->daughter(0)->numberOfDaughters(); i++){
+      daughtersOfJet.push_back( (reco::Candidate *) jet->daughter(0)->daughter(i) );
+      jetPFcand["jet_PF_candidate_pt"].push_back(jet->daughter(0)->daughter(i)->pt() );
+      jetPFcand["jet_PF_candidate_phi"].push_back(jet->daughter(0)->daughter(i)->phi() );
+      jetPFcand["jet_PF_candidate_eta"].push_back(jet->daughter(0)->daughter(i)->eta() );
    }
-   
-   // Get subleading jet
-   if(jets->size() > 1){
-      for (std::vector<pat::Jet>::const_iterator jetBegin = jets->begin(), jetEnd = jets->end(), ijet = jetBegin; ijet != jetEnd; ++ijet){
-          if(!jet2 && jet1->pt() > ijet->pt() ){
-             *jet2 = *ijet;
-          }
-          if(jet2 && jet1->pt() > ijet->pt() && ijet->pt() > jet2->pt() ){
-             *jet2 = *ijet;
-          }
-       }
-       sortedJets->push_back(*jet2);
-       //std::cout << "Jet 2 pT: " << jet2->pt() << std::endl;
-   } 
-
-   // Get third leading jet
-   if(jets->size() > 2){
-      for (std::vector<pat::Jet>::const_iterator jetBegin = jets->begin(), jetEnd = jets->end(), ijet = jetBegin; ijet != jetEnd; ++ijet){
-          if(!jet3 && jet2->pt() > ijet->pt() ){
-             *jet3 = *ijet;
-          }
-          if(jet3 && jet2->pt() > ijet->pt() && ijet->pt() > jet3->pt() ){
-             *jet3 = *ijet;
-          }
-       }
-       sortedJets->push_back(*jet3);
-       //std::cout << "Jet 3 pT: " << jet3->pt() << std::endl;
-   } 
-
-   // Get fourth leading jet
-   if(jets->size() > 3){
-      for (std::vector<pat::Jet>::const_iterator jetBegin = jets->begin(), jetEnd = jets->end(), ijet = jetBegin; ijet != jetEnd; ++ijet){
-          if(!jet4 && jet3->pt() > ijet->pt() ){
-             *jet4 = *ijet;
-          }
-          if(jet4 && jet3->pt() > ijet->pt() && ijet->pt() > jet4->pt() ){
-             *jet4 = *ijet;
-          }
-       }
-       sortedJets->push_back(*jet4);
-       //std::cout << "Jet 4 pT: " << jet4->pt() << std::endl;
+   // Get all daughters for the second Soft Drop Subjet
+   for (unsigned int i = 0; i < jet->daughter(1)->numberOfDaughters(); i++){
+      daughtersOfJet.push_back( (reco::Candidate *) jet->daughter(1)->daughter(i));
+      jetPFcand["jet_PF_candidate_pt"].push_back(jet->daughter(1)->daughter(i)->pt() );
+      jetPFcand["jet_PF_candidate_phi"].push_back(jet->daughter(1)->daughter(i)->phi() );
+      jetPFcand["jet_PF_candidate_eta"].push_back(jet->daughter(1)->daughter(i)->eta() );
    }
-
-   return sortedJets;
+   // Get all daughters not included in Soft Drop
+   for (unsigned int i = 2; i< jet->numberOfDaughters(); i++){
+      daughtersOfJet.push_back( (reco::Candidate *) jet->daughter(i) );
+      jetPFcand["jet_PF_candidate_pt"].push_back(jet->daughter(i)->pt() );
+      jetPFcand["jet_PF_candidate_phi"].push_back(jet->daughter(i)->phi() );
+      jetPFcand["jet_PF_candidate_eta"].push_back(jet->daughter(i)->eta() );
+   }
 }
 
 //=================================================================================
-// Calculate delta Phi ////////////////////////////////////////////////////////////
+// Store Jet Variables ------------------------------------------------------------
 //---------------------------------------------------------------------------------
-// phi1 and phi2 are azimuthal angles in the detector -----------------------------
-//---------------------------------------------------------------------------------
+// This takes various jet quantaties and stores them on the map used to fill ------
+// the jet tree -------------------------------------------------------------------
+//---------------------------------------------------------------------------------  
 
-float myDeltaPhi(float phi1, float phi2)
-{
-   double pi = 3.14159265358979323846;
-   int delPhi = phi1-phi2;
-   while(delPhi > pi){
-      delPhi -= 2*pi;
-   }
-   while(delPhi <= -pi){
-      delPhi += 2*pi;
-   }
-   return delPhi;
+void storeJetVariables(std::map<std::string, float> &treeVars, std::vector<pat::Jet>::const_iterator jet){ 
+                       // pasing a variable with & is pass-by-reference which keeps changes in this func
+   // Jet four vector and Soft Drop info
+   treeVars["jetAK8_phi"] = jet->phi();
+   treeVars["jetAK8_eta"] = jet->eta(); 
+   treeVars["jetAK8_pt"] = jet->pt(); 
+   treeVars["jetAK8_mass"] = jet->mass(); 
+   treeVars["jetAK8_SoftDropMass"] = jet->userFloat("ak8PFJetsCHSSoftDropMass");
+
+   // Store Subjettiness info
+   treeVars["jetAK8_Tau4"] = jet->userFloat("NjettinessAK8CHS:tau4");  //important for H->WW jets
+   treeVars["jetAK8_Tau3"] = jet->userFloat("NjettinessAK8:tau3");
+   treeVars["jetAK8_Tau2"] = jet->userFloat("NjettinessAK8:tau2");
+   treeVars["jetAK8_Tau1"] = jet->userFloat("NjettinessAK8:tau1");
 }
 
 //=================================================================================
-// Calculate delta R //////////////////////////////////////////////////////////////
+// Store Secondary Vertex Information ---------------------------------------------
 //---------------------------------------------------------------------------------
-// phi is the azimuthal angle in the detector -------------------------------------
-// eta is psuedorapidity ----------------------------------------------------------
-//---------------------------------------------------------------------------------
-
-float myDeltaR(float eta1, float phi1, float eta2, float phi2)
-{
-   float delEta = eta1 - eta2;
-   float delPhi = myDeltaPhi(phi1, phi2);
-   float delR = TMath::Sqrt(delEta*delEta + delPhi*delPhi);
-   return delR;
-}
-
-//=================================================================================
-// Match using delta R cone ///////////////////////////////////////////////////////
-//---------------------------------------------------------------------------------
-// etaPhi is a 2D array of eta phi values ( [ [eta1, phi1], [eta2, phi2], ...] ) --
-// limR is the upper bound of delta R for matching --------------------------------
-// returns an array where true means matched --------------------------------------
+// This takes various secondary vertex quantities and stores them on the map ------
+// used to fill the tree ----------------------------------------------------------
 //---------------------------------------------------------------------------------
 
-std::vector<std::vector<bool> > deltaRMatch(std::vector<std::array<float, 2> > etaPhi1, std::vector<std::array<float, 2> > etaPhi2, float limR)
-{
-   std::vector<std::vector<bool> > matchList;
-   bool match = false;
+void storeSecVertexVariables(std::map<std::string, float> &treeVars, TLorentzVector jet, 
+                             std::vector<reco::VertexCompositePtrCandidate> secVertices){
 
-   for(std::size_t i = 0; i < etaPhi1.size(); i++){
-
-      std::vector<bool> nestedMatchList;
-
-      for(std::size_t j = 0; j < etaPhi2.size(); j++){
-         float delR = myDeltaR(etaPhi1[i][0], etaPhi1[i][1], etaPhi2[j][0], etaPhi2[j][1]);
-         if(delR < limR) match = true;
-         if(delR > limR) match = false;
-         nestedMatchList.push_back(match);
+   int numMatched = 0; // counts number of secondary vertices
+   for(std::vector<reco::VertexCompositePtrCandidate>::const_iterator vertBegin = secVertices.begin(), 
+              vertEnd = secVertices.end(), ivert = vertBegin; ivert != vertEnd; ivert++){
+      TLorentzVector vert(ivert->px(), ivert->py(), ivert->pz(), ivert->energy() );
+      // match vertices to jet
+      if(jet.DeltaR(vert) < 0.8 ){
+         numMatched++;
+         // save secondary vertex info for the first three sec vertices
+         if(numMatched <= 3){
+            std::string i = std::to_string(numMatched);
+            treeVars["SV_"+i+"_pt"] = ivert->pt();
+            treeVars["SV_"+i+"_eta"] = ivert->eta();
+            treeVars["SV_"+i+"_phi"] = ivert->phi();
+            treeVars["SV_"+i+"_mass"] = ivert->mass();
+            treeVars["SV_"+i+"_nTracks"] = ivert->numberOfDaughters();
+            treeVars["SV_"+i+"_chi2"] = ivert->vertexChi2();
+            treeVars["SV_"+i+"_Ndof"] = ivert->vertexNdof();
+         }
       }
-      matchList.push_back(nestedMatchList);
    }
-   return matchList;
+   treeVars["nSecondaryVertices"] = numMatched;
 }
 
+//=================================================================================
+// Store Higgs Rest Frame Variables -----------------------------------------------
+//---------------------------------------------------------------------------------
+// This boosts an ak8 jet (and all of its constituents) into the higgs rest frame -
+// and then uses it to calculate FoxWolfram moments, Event Shape Variables, -------
+// and assymmetry variables -------------------------------------------------------
+//---------------------------------------------------------------------------------
+
+void storeHiggsFrameVariables(std::map<std::string, float> &treeVars, std::vector<reco::Candidate *> daughtersOfJet,
+                              std::vector<pat::Jet>::const_iterator jet){ 
+
+   using namespace std;
+
+   // get 4 vector for Higgs rest frame
+   typedef reco::Candidate::PolarLorentzVector fourv;
+   fourv thisJet = jet->polarP4();
+   TLorentzVector thisJetLV_H(0.,0.,0.,0.);
+   thisJetLV_H.SetPtEtaPhiM(thisJet.Pt(), thisJet.Eta(), thisJet.Phi(), 125. );
+
+   std::vector<TLorentzVector> particles_H;
+   std::vector<math::XYZVector> particles2_H;
+   std::vector<reco::LeafCandidate> particles3_H;
+   
+   double sumPz = 0;
+   double sumP = 0;
+
+   // Boost to Higgs rest frame
+   for(unsigned int i = 0; i < daughtersOfJet.size(); i++){
+      // Do not include low mass subjets
+      if (daughtersOfJet[i]->pt() < 0.5) continue;
+   
+      // Create 4 vector to boost to Higgs frame
+      TLorentzVector thisParticleLV_H( daughtersOfJet[i]->px(), daughtersOfJet[i]->py(), daughtersOfJet[i]->pz(), daughtersOfJet[i]->energy() );
+   
+      // Boost to Higgs rest frame
+      thisParticleLV_H.Boost( -thisJetLV_H.BoostVector() );
+      particles_H.push_back( thisParticleLV_H );	
+      particles2_H.push_back( math::XYZVector( thisParticleLV_H.X(), thisParticleLV_H.Y(), thisParticleLV_H.Z() ));
+      particles3_H.push_back( reco::LeafCandidate(+1, reco::Candidate::LorentzVector( thisParticleLV_H.X(), thisParticleLV_H.Y(), 
+                                                                                      thisParticleLV_H.Z(), thisParticleLV_H.T() ) ));
+
+      // Sum rest frame momenta for asymmetry calculation
+      if (daughtersOfJet[i]->pt() < 10) continue;
+      sumPz += thisParticleLV_H.Pz();
+      sumP += abs( thisParticleLV_H.P() );
+   }
+   
+   // Fox Wolfram Moments
+   double fwm_H[5] = { 0.0, 0.0 ,0.0 ,0.0,0.0};
+   FWMoments( particles_H, fwm_H);
+   treeVars["FoxWolfH1_Higgs"] = fwm_H[1];
+   treeVars["FoxWolfH2_Higgs"] = fwm_H[2];
+   treeVars["FoxWolfH3_Higgs"] = fwm_H[3];
+   treeVars["FoxWolfH4_Higgs"] = fwm_H[4];
+   
+   // Event Shape Variables
+   EventShapeVariables eventShapes_H( particles2_H );
+   Thrust thrustCalculator_H( particles3_H.begin(), particles3_H.end() );
+   treeVars["isotropy_Higgs"] = eventShapes_H.isotropy();
+   treeVars["sphericity_Higgs"] = eventShapes_H.sphericity(2);
+   treeVars["aplanarity_Higgs"] = eventShapes_H.aplanarity(2);
+   treeVars["thrust_Higgs"] = thrustCalculator_H.thrust();
+
+   // Jet Asymmetry
+   double asymmetry = sumPz/sumP;
+   treeVars["asymmetry_Higgs"] = asymmetry;
+}

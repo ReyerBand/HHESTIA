@@ -10,6 +10,9 @@
 
 // include files
 #include "DataFormats/PatCandidates/interface/Jet.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
+#include "PhysicsTools/CandUtils/interface/EventShapeVariables.h"
+#include "PhysicsTools/CandUtils/interface/Thrust.h"
 #include "TMath.h"
 #include "TLorentzVector.h"
 
@@ -20,20 +23,22 @@
 // calculate Legendre Polynomials
 float LegendreP(float x, int order);
 
-
 // calculate Fox Wolfram moments
 int FWMoments(std::vector<TLorentzVector> particles, double (&outputs)[5] );
 
-// sort jet collection in terms of pT
-std::vector<pat::Jet> * sortJets(std::vector<pat::Jet> *jets);
+// get jet's constituents
+void getJetDaughters(std::vector<reco::Candidate * > &daughtersOfJet, std::vector<pat::Jet>::const_iterator jet,
+                     std::map<std::string, std::vector<float> > &jetPFcand ); 
 
-// find difference in phi
-float myDeltaPhi(float phi1, float phi2);
+// store the jet variables
+void storeJetVariables(std::map<std::string, float> &treeVars, std::vector<pat::Jet>::const_iterator jet); 
 
-// find the delta R between two objects
-float myDeltaR(float eta1, float phi1, float eta2, float phi2);
+// store the secondary vertex variables
+void storeSecVertexVariables(std::map<std::string, float> &treeVars, TLorentzVector jet, 
+                             std::vector<reco::VertexCompositePtrCandidate> secVertices);
 
-// delta R match two objects
-std::vector<std::vector<bool> > deltaRMatch(std::vector<std::array<float, 2> > etaPhi1, std::vector<std::array<float, 2> > etaPhi2, float limR);
+// store the Higgs frame variables
+void storeHiggsFrameVariables(std::map<std::string, float> &treeVars, std::vector<reco::Candidate *> daughtersOfJet,
+                              std::vector<pat::Jet>::const_iterator jet); 
 
 #endif
